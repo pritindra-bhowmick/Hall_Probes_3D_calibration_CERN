@@ -316,7 +316,6 @@ def scan_3D(filename):
         l2 = clm[3:8]
         l2 = sqrt(2) *np.array(l2)/np.linalg.norm(l2)
         jfout = SolveforJ(n,l2[0].imag,l2[1].imag,l2[1].real)
-        print('n,j = ',n,jfout)
         nMat.append(n)
         jMat.append(list(jfout))
 
@@ -345,6 +344,7 @@ def scan_3D(filename):
     # Linear fit  
     R1 = (Rb-Ra)/(T1-T0)           # Slope
     R0 = 0.5*(Ra+Rb-R1*(T1+T0))    # Intercept
+#     print(Ra,Rb,R1,R0)
     
     # Printing in file: intercept, slope, temperature during scanning, R*I
     print(str(R0)+','+str(R1)+','+str(T0)+','+str(Ra*I),file = sourceFile)
@@ -375,7 +375,7 @@ def scan_3D(filename):
     warray = np.array(wi[order-2])            # weight for Legendre Gauss Quadrature
     
     # Values of legendre polynomials at xarray for even degree legendre polynomials
-    legend = np.array([sp.special.legendre(n)(xarray) for n in range(0,2*order,2)])
+    legend = np.array([sp.special.legendre(n)(xarray) for n in range(2*order)])
     
     # The maximum value of magnetic field along with all values in vector form
     B0 = np.array([0.,0.,B_max]) 
@@ -410,14 +410,14 @@ def scan_3D(filename):
         if type1 == 'A':
             for inte in integrand1:    
                 print(str(inte)+',',file = sourceFile, end='')
-                print(str(inte)+',', end='')
+#                 print(str(inte)+',', end='')
         
         # If type1 == B, taking the legendre gauss quandrature integral to calculate a_lk and printing it on file
         if type1 == 'B':
-            for k in range(0,order):    
+            for k in range(0,2*order,2):    
                 inte = (2*k+1)*np.sum(integrand1*warray*legend[k])
                 print(str(inte)+',',file = sourceFile, end='')
-                print(str(inte)+',', end='')
+#                 print(str(inte)+',', end='')
         
         print('',file = sourceFile)
 
@@ -434,7 +434,7 @@ def findB(filename,Vgiven,T):
     
     rlm=[[],[],[]]
     alk=[]
-    err = 1.e-9
+    err = 1.e-8
 
     with open(filename+'Parameters.csv', 'r') as file:
         read = csv.reader(file)
@@ -512,7 +512,7 @@ def findB(filename,Vgiven,T):
                 for m in range(-l,l+1):
                     p2 += rlm[n][l*l+l+m]*sph_harm(m, l, ph,th)
                 Vmodel += Bmag**l*p1*p2
-        
+                
         # If type1 == B: Scaling [p1 = c_l(Bmag) = sum_{k=even} a_lk L_k(Bmag/Bmax) ] 
         # where L_k are legendre polynomials and a_lk are scaling parameters
         if type1=='B':
@@ -557,3 +557,116 @@ def findB(filename,Vgiven,T):
         x0,y0,z0 = X0
 
     return X0
+                
+            
+# ***************************************************************************************************
+#       FUNCTIONS TO SCAN THE PARAMETERS, GIVEN MAGNETIC FIELD AND TEMPERATURES TO GIVE MODEL VOLTAGE
+# ***************************************************************************************************
+
+def findVmodel(filename,Bgiven,T):
+    
+    # ------------------------------------------------------------------------------
+    # 1 : Scanning parameters from file
+    # ------------------------------------------------------------------------------
+    
+    rlm=[[],[],[]]
+    alk=[]
+    err = 1.e-8
+
+    with open(filename+'Parameters.csv', 'r') as file:
+        read = csv.reader(file)
+        i=0
+        for row in read:
+            
+            # Scanning the type for scanning done
+            if i==0: type1 = str(row[0])   
+            
+            #scanning parameters based on type
+            if i==1: 
+                # Scanning list of magnetic field values
+                if type1 == 'A':           
+                    B0_list = [float(r) for r in row[:-1]]
+                    order = len(B0_list)   
+                # Scanning maximum magnetic field and order
+                if type1 == 'B':
+                    B_max = float(row[0]) 
+                    order = int(row[1])
+                for jj in range(order): alk.append([])
+            
+            # The values of l scanning is done
+            if i==2:
+                l_list = [int(l) for l in row[:-1]]
+                #Total number of spherical harmonic function = (l+1)^2
+                l_m = (l_list[-1]+1)**2 
+                l_l = len(l_list)
+            
+            # Scanning from file: intercept, slope, temperature during scanning, R*I
+            if i==6: 
+                R0 = float(row[0])
+                R1 = float(row[1])
+                T0 = float(row[2])
+                div = float(row[3])
+            
+            if i >= 7: 
+                
+                # Scanning r_l[m] values from file
+                if i < l_m+7:
+                    for jj in range(3):
+                        rlm[jj].append(complex(row[jj]))
+                
+                # Scanning c_l values if type1==A and a_lk if type1==B
+                if i>=l_m+7 and i<l_m+l_l+7:
+                    for jj in range(order):
+                        alk[jj].append(float(row[jj]))
+
+            i = i+1
+
+    rlm = np.array(rlm)
+    alk = np.array(alk)
+    if type1 =='A': alk = alk.transpose()
+        
+    # ------------------------------------------------------------------------------
+    # 2 : Building the model
+    # ------------------------------------------------------------------------------
+    
+    def V_out_model(B,n):
+        
+        # Calculating azimuthal and polar angles and magnitude of magnetic field
+        th, ph = getAngle(B)
+        Bmag = np.linalg.norm(B)
+        Vmodel = 0
+        
+        # c_l is a B dependent function. p1 = c_l(Bmag) (Note: c_l is direction independent)
+        # p2 = sum_{m=-l}^{l} r_l[m]*Y_lm(theta, phi) 
+
+        # If type1 == A: Scaling [p1 = c_l(Bmag) = L'(Bmag)]  where L'
+        # is the lagrange interpolation function for given set of points
+        if type1=='A':
+            for i in range(l_l):
+                l = l_list[i]
+                p1= lagrange_even(B0_list,alk[i],Bmag) 
+                p2=0
+                for m in range(-l,l+1):
+                    p2 += rlm[n][l*l+l+m]*sph_harm(m, l, ph,th)
+                Vmodel += Bmag**l*p1*p2
+                
+        # If type1 == B: Scaling [p1 = c_l(Bmag) = sum_{k=even} a_lk L_k(Bmag/Bmax) ] 
+        # where L_k are legendre polynomials and a_lk are scaling parameters
+        if type1=='B':
+            leg_array = np.array([sp.special.legendre(2*k)(Bmag/B_max) for k in range(order)])
+            for i in range(l_l):
+                l = l_list[i]
+                p1=0
+                p2=0
+                for k in range(0,order):
+                    if abs(alk[k][i])>err : p1+=alk[k][i]* leg_array[k]
+                for m in range(-l,l+1):
+                    p2 += rlm[n][l*l+l+m]*sph_harm(m, l, ph,th)
+                Vmodel += Bmag**l*p1*p2
+        
+        # linear fit model for Temperature dependency 
+        return Vmodel.real * (T*R1+R0)/(T0*R1+R0)
+    
+    return np.array([V_out_model(Bgiven,j) for j in range(3)])
+
+        
