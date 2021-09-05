@@ -2,7 +2,7 @@
 # Project name: High precision calibration of 3D hall probes for magnet mapping apparatuses.
 # Find me at pritindra2001@gmail.com, pritindra.bhowmick@cern.ch
 # Find the project report at CERN CDS url coming soon
-# History : Version 1: 04-09-2021
+# History : Version 1: 05-09-2021
 
 
 # ------------------------------------------------------------------------------
