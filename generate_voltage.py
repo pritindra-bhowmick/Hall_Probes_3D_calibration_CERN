@@ -2,7 +2,7 @@
 # Project name: High precision calibration of 3D hall probes for magnet mapping apparatuses.
 # Find me at pritindra2001@gmail.com, pritindra.bhowmick@cern.ch
 # Find the project report at CERN CDS url coming soon
-# History : Version 1: 05-09-2021
+# History : Version 1: 04-09-2021
 
 
 # ------------------------------------------------------------------------------
@@ -39,16 +39,16 @@ I=1*10**(-2)   #current, we know this
 R=200          #hall coefficient
 G=1            #planar hall coefficient
 tau = 4        #Non linearity parameter
-mT = -.1       #Temperature dependence
+mT = -0.006    #Temperature dependence
 
 #Hall voltage
-def V_hall(n,J,B,T): return  2*tau*(1-np.exp(-(R+mT*T)*I*np.dot(n,B)/tau))/(1+np.exp(-(R+mT*T)*I*np.dot(n,B)/tau)) 
+def V_hall(n,J,B,T): return  2*tau*(1-np.exp(-R*I*np.dot(n,B)/tau))/(1+np.exp(-R*I*np.dot(n,B)/tau)) 
 
 #Planar Hall Voltage
 def V_phe(n,J,B) : return 2*G*I * np.dot(J,B) * np.dot(np.cross(n,J),B) 
 
 #output voltage from the hall probe
-def V_out(n,J,B,T): return V_hall(n,J,B,T)+V_phe(n,J,B)
+def V_out(n,J,B,T): return (1+np.sin(mT*T))*(V_hall(n,J,B,T)+V_phe(n,J,B))
 
 # ------------------------------------------------------------------------------
 # 4 : Introducing non-orthogonality

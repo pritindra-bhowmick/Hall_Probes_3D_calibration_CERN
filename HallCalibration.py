@@ -342,9 +342,8 @@ def scan_3D(filename):
     Rb = SphericalHarmonicCoeffmag(Vlist[-2][2])[1]/I/B0/2.046653415892977
     
     # Linear fit  
-    R1 = (Rb-Ra)/(T1-T0)           # Slope
+    R1 = (Ra-Rb)/(T1-T0)           # Slope
     R0 = 0.5*(Ra+Rb-R1*(T1+T0))    # Intercept
-#     print(Ra,Rb,R1,R0)
     
     # Printing in file: intercept, slope, temperature during scanning, R*I
     print(str(R0)+','+str(R1)+','+str(T0)+','+str(Ra*I),file = sourceFile)
