@@ -36,7 +36,7 @@ angle = np.linspace(0,2*np.pi,iter,endpoint=False)   # values of angle t
 # ------------------------------------------------------------------------------
 
 I=1*10**(-2)   #current, we know this
-R=200          #hall coefficient
+R=170          #hall coefficient
 G=1            #planar hall coefficient
 tau = 4        #Non linearity parameter
 mT = -0.006    #Temperature dependence
