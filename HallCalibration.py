@@ -342,11 +342,10 @@ def scan_3D(filename):
     Rb = SphericalHarmonicCoeffmag(Vlist[-2][2])[1]/I/B0/2.046653415892977
     
     # Linear fit  
-    R1 = (Ra-Rb)/(T1-T0)           # Slope
-    R0 = 0.5*(Ra+Rb-R1*(T1+T0))    # Intercept
+    R1 = (Ra-Rb)/(T1-T0)/Rb          # Slope
     
-    # Printing in file: intercept, slope, temperature during scanning, R*I
-    print(str(R0)+','+str(R1)+','+str(T0)+','+str(Ra*I),file = sourceFile)
+    # Printing in file: slope, temperature during scanning, R*I
+    print(str(R1)+','+str(T0)+','+str(Ra*I),file = sourceFile)
     
     # ------------------------------------------------------------------------------
     # 8 : Calculating and Printing r_l[m] = c_lm/c_l 
@@ -433,7 +432,7 @@ def findB(filename,Vgiven,T):
     
     rlm=[[],[],[]]
     alk=[]
-    err = 1.e-8
+    err = 1.e-9
 
     with open(filename+'Parameters.csv', 'r') as file:
         read = csv.reader(file)
@@ -462,12 +461,11 @@ def findB(filename,Vgiven,T):
                 l_m = (l_list[-1]+1)**2 
                 l_l = len(l_list)
             
-            # Scanning from file: intercept, slope, temperature during scanning, R*I
+            # Scanning from file: slope, temperature during scanning, R*I
             if i==6: 
-                R0 = float(row[0])
-                R1 = float(row[1])
-                T0 = float(row[2])
-                div = float(row[3])
+                R1 = float(row[0])
+                T0 = float(row[1])
+                div = float(row[2])
             
             if i >= 7: 
                 
@@ -527,7 +525,7 @@ def findB(filename,Vgiven,T):
                 Vmodel += Bmag**l*p1*p2
         
         # linear fit model for Temperature dependency 
-        return Vmodel.real * (T*R1+R0)/(T0*R1+R0)
+        return Vmodel.real * (1+R1*(T-T0))
 
     # ------------------------------------------------------------------------------
     # 3 : Reverting the equation using multidimensional Newton-Raphson method
@@ -599,12 +597,11 @@ def findVmodel(filename,Bgiven,T):
                 l_m = (l_list[-1]+1)**2 
                 l_l = len(l_list)
             
-            # Scanning from file: intercept, slope, temperature during scanning, R*I
+            # Scanning from file: slope, temperature during scanning, R*I
             if i==6: 
-                R0 = float(row[0])
-                R1 = float(row[1])
-                T0 = float(row[2])
-                div = float(row[3])
+                R1 = float(row[0])
+                T0 = float(row[1])
+                div = float(row[2])
             
             if i >= 7: 
                 
@@ -664,7 +661,7 @@ def findVmodel(filename,Bgiven,T):
                 Vmodel += Bmag**l*p1*p2
         
         # linear fit model for Temperature dependency 
-        return Vmodel.real * (T*R1+R0)/(T0*R1+R0)
+        return Vmodel.real * (1+R1*(T-T0))
     
     return np.array([V_out_model(Bgiven,j) for j in range(3)])
 
